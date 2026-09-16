@@ -1,0 +1,124 @@
+// VideoTrust AI — Prisma Database Schema
+// Supports SQLite (Zero-setup local development) and PostgreSQL (Production)
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  apiKey    String?  @unique
+  plan      String   @default("FREE") // FREE | PRO | ENTERPRISE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  feedback  UserFeedback[]
+
+  @@map("users")
+}
+
+model Video {
+  id              String   @id @default(cuid())
+  videoId         String   @unique // 11-character YouTube video ID
+  title           String
+  channel         String
+  channelId       String?
+  views           Int      @default(0)
+  likes           Int      @default(0)
+  likeRatio       Float    @default(0.0)
+  durationSeconds Int      @default(0)
+  thumbnailUrl    String?
+  publishedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  reports         AnalysisReport[]
+  comments        CommentSample[]
+  feedback        UserFeedback[]
+
+  @@index([videoId])
+  @@index([channel])
+  @@map("videos")
+}
+
+model AnalysisReport {
+  id                  String   @id @default(cuid())
+  videoId             String
+  video               Video    @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+
+  // Verdict
+  recommendation      String   // WATCH | MAYBE | SKIP
+  confidence          Float    // 0.00 to 1.00
+  trustScore          Int      // 0 to 100
+  isClickbait         Boolean  @default(false)
+  clickbaitDivergence Float    @default(0.0) // 0.00 to 1.00
+
+  // Score Breakdown
+  authenticityScore   Int      @default(0)
+  sentimentScore      Int      @default(0)
+  integrityScore      Int      @default(0)
+  engagementScore     Int      @default(0)
+
+  // AI Insights
+  summaryShort        String
+  keyTakeaways        String   // Serialized JSON string array
+  audienceRedFlags    String   // Serialized JSON string array
+  topAudiencePraise   String   // Serialized JSON string array
+
+  // Telemetry
+  commentsSampled     Int      @default(0)
+  spamDetected        Int      @default(0)
+  transcriptAvailable Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  @@index([videoId])
+  @@index([trustScore])
+  @@index([recommendation])
+  @@index([createdAt])
+  @@map("analysis_reports")
+}
+
+model CommentSample {
+  id          String   @id @default(cuid())
+  videoId     String
+  video       Video    @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+
+  author      String
+  commentText String
+  likes       Int      @default(0)
+  isPinned    Boolean  @default(false)
+  isSpam      Boolean  @default(false)
+  spamReason  String?  // BOT_RING | PROMO | EMOJI | FINANCIAL_SCAM
+  bucketType  String   // TOP | RECENT | LONGFORM
+  createdAt   DateTime @default(now())
+
+  @@index([videoId])
+  @@index([isSpam])
+  @@index([bucketType])
+  @@map("comment_samples")
+}
+
+model UserFeedback {
+  id                 String   @id @default(cuid())
+  videoId            String
+  video              Video    @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+
+  userId             String?
+  user               User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  isHelpful          Boolean  @default(true)
+  agreedWithVerdict  Boolean  @default(true)
+  userNotes          String?
+  createdAt          DateTime @default(now())
+
+  @@index([videoId])
+  @@index([userId])
+  @@map("user_feedback")
+}

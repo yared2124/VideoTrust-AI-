@@ -1,0 +1,67 @@
+version: "3.8"
+
+services:
+  # 1. VideoTrust Core API & Scraper Engine
+  videotrust-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: videotrust-api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://videotrust_user:secure_password_123@videotrust-db:5432/videotrust
+      - REDIS_URL=redis://videotrust-redis:6379
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      videotrust-db:
+        condition: service_healthy
+      videotrust-redis:
+        condition: service_started
+    networks:
+      - videotrust-net
+
+  # 2. In-Memory Cache (Redis)
+  videotrust-redis:
+    image: redis:7-alpine
+    container_name: videotrust-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - videotrust-net
+
+  # 3. Relational Database (PostgreSQL)
+  videotrust-db:
+    image: postgres:16-alpine
+    container_name: videotrust-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: videotrust_user
+      POSTGRES_PASSWORD: secure_password_123
+      POSTGRES_DB: videotrust
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U videotrust_user -d videotrust"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - videotrust-net
+
+networks:
+  videotrust-net:
+    driver: bridge
+
+volumes:
+  pg_data:
+  redis_data:

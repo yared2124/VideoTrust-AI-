@@ -1,0 +1,33 @@
+{
+  "name": "@videotrust/backend",
+  "version": "1.0.0",
+  "description": "VideoTrust AI Backend Intelligence API & Cache Layer",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "db:push": "prisma db push",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx src/db/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.4.1",
+    "fastify": "^5.2.1",
+    "@fastify/cors": "^10.0.2",
+    "@fastify/rate-limit": "^10.2.2",
+    "zod": "^3.24.2",
+    "youtubei.js": "^10.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "prisma": "^6.4.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}
