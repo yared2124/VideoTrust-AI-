@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { ingestVideo, extractVideoId } from './ingestion/index.js';
 import { filterAndSampleComments } from './filter/index.js';
+import { scoreAndAnalyzeVideo } from './scorer/index.js';
 
 const server = Fastify({
   logger: true,
@@ -26,6 +27,58 @@ server.get('/health', async () => {
     service: 'videotrust-backend',
     timestamp: new Date().toISOString(),
   };
+});
+
+// Official SPEC-001 Analysis Endpoint
+server.post('/api/v1/analyze', async (request, reply) => {
+  const body = request.body as { url?: string; videoId?: string; forceRefresh?: boolean } | undefined;
+  const input = body?.url || body?.videoId;
+
+  if (!input) {
+    return reply.status(400).send({
+      success: false,
+      error: 'Either "url" or "videoId" must be provided in request body.',
+    });
+  }
+
+  const videoId = extractVideoId(input);
+  if (!videoId) {
+    return reply.status(400).send({
+      success: false,
+      error: `Could not parse valid YouTube video ID from "${input}".`,
+    });
+  }
+
+  const startTime = Date.now();
+  try {
+    // 1. Ingest raw metadata, comments, and transcript via InnerTube
+    const rawData = await ingestVideo(videoId, { maxComments: 500 });
+
+    // 2. Filter bot rings, spam, and extract balanced high-signal comment sample
+    const filterResult = filterAndSampleComments(rawData.comments, {
+      targetSampleCount: 120,
+    });
+
+    // 3. Deterministic Trust Scoring, Clickbait Divergence & Gemini Synthesis
+    const report = await scoreAndAnalyzeVideo(rawData, filterResult, {
+      isCached: false,
+    });
+
+    const executionTimeMs = Date.now() - startTime;
+    reply.header('X-Cache', 'MISS');
+    reply.header('X-Execution-Time-Ms', executionTimeMs.toString());
+
+    return {
+      success: true,
+      data: report,
+    };
+  } catch (error) {
+    server.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      error: (error as Error).message,
+    });
+  }
 });
 
 // Debug / Testing endpoint for Ingestion Pipeline
