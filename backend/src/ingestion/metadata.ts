@@ -32,7 +32,7 @@ export async function fetchVideoMetadata(
     likes,
     likeRatio,
     durationSeconds,
-    publishedAt: basic.upload_date || basic.start_timestamp || new Date().toISOString(),
+    publishedAt: (basic as any).upload_date || (basic as any).start_timestamp || new Date().toISOString(),
     thumbnailUrl: bestThumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
   };
 }
