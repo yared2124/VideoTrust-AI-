@@ -1,8 +1,8 @@
 // VideoTrust AI — Prisma Database Schema
-// Supports SQLite (Zero-setup local development) and PostgreSQL (Production)
+// Provider: PostgreSQL 16 (via videotrust-db docker-compose service)
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
