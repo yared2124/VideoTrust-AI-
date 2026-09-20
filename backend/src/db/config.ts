@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().default("file:./dev.db"),
+  // PostgreSQL connection string — matches docker-compose videotrust-db service
+  DATABASE_URL: z.string().default("postgresql://videotrust_user:secure_password_123@localhost:5432/videotrust"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   CACHE_TTL_DAYS: z.coerce.number().default(30),
 });
