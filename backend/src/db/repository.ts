@@ -1,5 +1,6 @@
 import { prisma } from "./client.js";
 import { CACHE_TTL_MS } from "./config.js";
+import type { Prisma } from "@prisma/client";
 
 export interface SaveReportParams {
   videoId: string;
@@ -110,6 +111,7 @@ export class VideoTrustRepository {
       },
       telemetry: {
         commentsSampled: latestReport.commentsSampled,
+        commentsAnalyzed: latestReport.commentsSampled,
         spamDetected: latestReport.spamDetected,
         transcriptAvailable: latestReport.transcriptAvailable,
         analyzedAt: latestReport.createdAt.toISOString(),
@@ -122,7 +124,7 @@ export class VideoTrustRepository {
    * Persist a completed video analysis and optional sample comments
    */
   public async saveReport(data: SaveReportParams) {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. Upsert video record
       const video = await tx.video.upsert({
         where: { videoId: data.videoId },
