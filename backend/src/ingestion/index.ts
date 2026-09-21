@@ -65,7 +65,7 @@ export async function ingestVideo(
   }
 
   const innertube = await getInnertubeClient();
-  const maxComments = options.maxComments ?? 500;
+  const maxComments = options.maxComments ?? 2000;
 
   // Execute extraction in parallel for lowest latency
   const [metadataSettled, commentsSettled, transcriptSettled] = await Promise.allSettled([

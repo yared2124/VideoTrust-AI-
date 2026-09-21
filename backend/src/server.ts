@@ -88,11 +88,11 @@ server.post('/api/v1/analyze', async (request, reply) => {
     // CACHE MISS / REFRESH: Run Ingestion, Filter, and Scorer Pipeline
     // -------------------------------------------------------------
     // 1. Ingest raw metadata, comments, and transcript via InnerTube
-    const rawData = await ingestVideo(videoId, { maxComments: 500 });
+    const rawData = await ingestVideo(videoId, { maxComments: 2000 });
 
     // 2. Filter bot rings, spam, and extract balanced high-signal comment sample
     const filterResult = filterAndSampleComments(rawData.comments, {
-      targetSampleCount: 120,
+      targetSampleCount: 200,
     });
 
     // 3. Deterministic Trust Scoring, Clickbait Divergence & Gemini Synthesis

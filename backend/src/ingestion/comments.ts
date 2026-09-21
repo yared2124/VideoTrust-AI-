@@ -8,16 +8,23 @@ import type { RawComment } from './types.js';
 export async function fetchVideoComments(
   innertube: Innertube,
   videoId: string,
-  maxComments = 500
+  maxComments = 2000
 ): Promise<RawComment[]> {
   const comments: RawComment[] = [];
+  const startTime = Date.now();
+  const maxTimeoutMs = 12000; // 12-second safety cutoff to guarantee responsiveness
 
   try {
     let commentFeed = await innertube.getComments(videoId);
     let iterations = 0;
-    const maxIterations = 25; // Safety bound (each page usually has ~20-50 comments)
+    const maxIterations = 70; // Supports fetching up to 2000+ comments
 
-    while (commentFeed && comments.length < maxComments && iterations < maxIterations) {
+    while (
+      commentFeed &&
+      comments.length < maxComments &&
+      iterations < maxIterations &&
+      Date.now() - startTime < maxTimeoutMs
+    ) {
       iterations++;
 
       const threads = commentFeed.contents || [];

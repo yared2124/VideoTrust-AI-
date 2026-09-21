@@ -58,6 +58,11 @@ export function calculateSignalScore(comment: RawComment, matchedKeywords: strin
     score += 30;
   }
 
+  // 5. Milestone & timestamp references (e.g. 5:40, 12:15)
+  if (/\b(?:(\d{1,2}):)?([0-5]?\d):([0-5]\d)\b/.test(comment.text)) {
+    score += 25; // Comments referencing specific moments carry high actionable signal
+  }
+
   return Math.round(score);
 }
 

@@ -16,15 +16,18 @@ export function generateHeuristicInsights(
   metadata: RawVideoMetadata,
   curatedComments: CuratedComment[]
 ): VideoInsights {
-  // Extract warning red flags from keyword-boosted comments
   const redFlags: string[] = [];
   const praise: string[] = [];
 
   for (const c of curatedComments) {
-    if (c.matchedKeywords.length > 0 && redFlags.length < 3) {
-      redFlags.push(`⚠️ "${c.text.slice(0, 100).trim()}..."`);
-    } else if (c.likeCount > 5 && praise.length < 2) {
-      praise.push(`"${c.text.slice(0, 100).trim()}..."`);
+    const text = c.text.replace(/[\r\n]+/g, ' ').trim();
+    const timeMatch = text.match(/\b(?:(\d{1,2}):)?([0-5]?\d):([0-5]\d)\b/);
+    const timePrefix = timeMatch ? `[⏱️ ${timeMatch[0]}] ` : '';
+
+    if (c.matchedKeywords.length > 0 && redFlags.length < 4) {
+      redFlags.push(`⚠️ ${timePrefix}"${text.slice(0, 130).trim()}..." (${c.likeCount} likes)`);
+    } else if (c.likeCount >= 3 && praise.length < 3) {
+      praise.push(`${timePrefix}"${text.slice(0, 130).trim()}..." (${c.likeCount} likes)`);
     }
   }
 
@@ -39,12 +42,12 @@ export function generateHeuristicInsights(
   // Key takeaways derived from video title and description
   const takeaways = [
     `Explains "${metadata.title}" by ${metadata.channelTitle}`,
-    `Published ${new Date(metadata.publishedAt).toLocaleDateString()} (${Math.round(metadata.durationSeconds / 60)} minutes)`,
-    `Analyzed across community feedback with ${metadata.likes.toLocaleString()} likes`,
+    `Duration: ${Math.round(metadata.durationSeconds / 60)} minutes • Views: ${metadata.views.toLocaleString()} • Likes: ${metadata.likes.toLocaleString()}`,
+    `Analyzed across ${curatedComments.length}+ filtered community comments`,
   ];
 
   return {
-    summaryShort: `${metadata.title} by ${metadata.channelTitle}. Analysis based on verified community signals, view-to-engagement metrics, and audience feedback.`,
+    summaryShort: `${metadata.title} by ${metadata.channelTitle}. Analysis synthesized from ${curatedComments.length} high-signal community reviews, like-to-view ratios, and engagement depth.`,
     keyTakeaways: takeaways,
     audienceRedFlags: redFlags,
     topAudiencePraise: praise,
