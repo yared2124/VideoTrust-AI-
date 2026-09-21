@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, RefreshCw, AlertCircle, Shield } from 'lucide-react';
+import { RefreshCw, AlertCircle, Shield } from 'lucide-react';
 import type { CompleteAnalysisReport, Recommendation } from '../types/index.js';
 import { SlidingDrawer } from './SlidingDrawer.js';
 
@@ -114,7 +114,7 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
             <div className="px-3 py-1.5 rounded-lg bg-[#0B0F19]/95 backdrop-blur-md border border-white/15 text-[11px] text-slate-200 shadow-xl whitespace-nowrap">
               {status.tooltip}
               <div className="text-[10px] text-indigo-300 mt-0.5 flex items-center gap-1">
-                <Sparkles className="h-3 w-3" /> Click to view takeaways & red flags
+                <Shield className="h-3 w-3 text-indigo-400" /> Click to view takeaways & red flags
               </div>
             </div>
           </div>

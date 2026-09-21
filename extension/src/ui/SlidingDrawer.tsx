@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
-  Sparkles,
   ShieldCheck,
   AlertTriangle,
   BarChart3,
@@ -118,26 +118,26 @@ export const SlidingDrawer: React.FC<SlidingDrawerProps> = ({
     return num.toLocaleString();
   };
 
-  return (
-    <>
+  return createPortal(
+    <div id="vt-drawer-portal" className="font-sans antialiased text-slate-100">
       {/* Backdrop overlay */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999998] transition-opacity duration-300"
+        className="fixed inset-0 bg-black/65 backdrop-blur-sm z-[2147483646] transition-opacity duration-300"
         onClick={onClose}
       />
 
       {/* Sliding Drawer Container */}
       <aside
-        className="fixed top-0 right-0 bottom-0 w-full sm:w-[420px] bg-[#0B0F19]/95 backdrop-blur-2xl border-l border-white/10 z-[9999999] shadow-2xl flex flex-col text-slate-100 font-sans transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        className="fixed top-0 right-0 bottom-0 w-full sm:w-[440px] bg-[#0B0F19]/98 backdrop-blur-2xl border-l border-white/10 z-[2147483647] shadow-2xl flex flex-col text-slate-100 font-sans transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
         role="dialog"
         aria-modal="true"
         aria-label="VideoTrust AI Intelligence Report"
       >
         {/* Header Zone */}
-        <header className="p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#0A0D14]/80">
+        <header className="p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#0A0D14]/90">
           <div className="flex items-center gap-2">
             <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-indigo-400">
-              <Sparkles className="h-4 w-4" />
+              <ShieldCheck className="h-4 w-4" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -263,8 +263,8 @@ export const SlidingDrawer: React.FC<SlidingDrawerProps> = ({
               {/* Executive Summary */}
               <div className="rounded-lg bg-slate-900/50 border border-white/10 p-3.5">
                 <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                  AI Summary
+                  <FileText className="h-3.5 w-3.5 text-indigo-400" />
+                  Video Summary
                 </h4>
                 <p className="text-[13px] text-slate-200 leading-relaxed">
                   {insights.summaryShort || 'No summary available.'}
@@ -275,7 +275,7 @@ export const SlidingDrawer: React.FC<SlidingDrawerProps> = ({
               {insights.keyTakeaways && insights.keyTakeaways.length > 0 && (
                 <div className="rounded-lg bg-slate-900/50 border border-white/10 p-3.5">
                   <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2.5">
-                    ✦ Key Takeaways
+                    Key Takeaways
                   </h4>
                   <ul className="space-y-2">
                     {insights.keyTakeaways.map((point, idx) => (
@@ -443,6 +443,7 @@ export const SlidingDrawer: React.FC<SlidingDrawerProps> = ({
           </div>
         </footer>
       </aside>
-    </>
+    </div>,
+    document.body
   );
 };

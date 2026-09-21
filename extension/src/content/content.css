@@ -2,23 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Scoped styles & root container isolation */
+/* Scoped styles & root container */
 #vt-root {
   display: inline-flex;
   vertical-align: middle;
-  contain: layout style;
+  align-items: center;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Zero Cumulative Layout Shift (CLS) wrapper */
+/* Elevated badge wrapper to avoid clipping by adjacent description */
 .vt-badge-wrapper {
   display: inline-flex;
   align-items: center;
   margin-left: 8px;
   margin-right: 8px;
-  contain: layout;
+  position: relative;
+  z-index: 1000;
+  vertical-align: middle;
+}
+
+/* Global Portal for Drawer (maximum possible z-index to overlay entire screen) */
+#vt-drawer-portal {
+  position: fixed;
+  z-index: 2147483647;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Shimmer pulse animation for loading states */
