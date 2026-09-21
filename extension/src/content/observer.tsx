@@ -230,3 +230,15 @@ if (document.body) {
 
 // Initial injection attempt
 setTimeout(injectWidget, 600);
+
+// Global listener for seeking video to exact timestamp when clicked in drawer
+window.addEventListener('vt-seek-video' as any, ((event: CustomEvent<{ seconds: number }>) => {
+  const seconds = event.detail?.seconds;
+  if (typeof seconds === 'number') {
+    const video = document.querySelector<HTMLVideoElement>('video');
+    if (video) {
+      video.currentTime = seconds;
+      video.play().catch(() => {});
+    }
+  }
+}) as EventListener);
