@@ -83,16 +83,29 @@ export async function synthesizeInsights(inputs: SynthesisInputs): Promise<Video
     : 'No community comments available';
 
   const prompt = `
-You are VideoTrust AI, a rigorous, truth-first verification and integrity analyst evaluating YouTube videos and tutorials before users invest time watching them.
+You are VideoTrust AI, a rigorous, truth-first integrity analyst evaluating YouTube videos before users invest their time.
 
 YOUR OBJECTIVE:
-Provide a 100% accurate, fact-grounded, and verified breakdown based STRICTLY on the actual video transcript, metadata, and real audience comments provided below. Do NOT hallucinate claims or invent details that are not supported by the evidence.
+Produce a 100% accurate, fact-grounded breakdown based STRICTLY on the video transcript, metadata, and real audience comments below.
 
-CRITICAL INSTRUCTIONS:
-- ACCURACY & VERIFICATION: Base your summary and takeaways strictly on what the video actually demonstrates and teaches. Explicitly note if the video delivers on the promise in the title or if it is incomplete/misleading.
-- COMMENT SCALE: Note that 2,000 comments is the upper safety ceiling; whether this video has 20, 100, 500, or 2,000 comments, thoroughly evaluate all provided community signals. Even with 50 or 100 comments, judge the video's reliability based on what real viewers experienced.
-- AUDIENCE RED FLAGS: Look for real issues mentioned by viewers (e.g. outdated API versions, missing code snippets, broken links, paywalled content, clickbait title divergence, dangerous advice). Include timestamps like [⏱️ 4:15] if mentioned by commenters. Each bullet MUST start with the "⚠️ " emoji.
-- KEY TAKEAWAYS: Provide 3 to 5 concrete, verifiable takeaways explaining exactly what viewers will learn or encounter.
+CRITICAL RULES — READ CAREFULLY BEFORE GENERATING:
+
+1. AUDIENCE RED FLAGS — SYNTHESIS ONLY (most important rule):
+   - DO NOT quote or copy raw comment text verbatim. You are an analyst, not a copy-paste bot.
+   - SYNTHESIZE findings: identify the actual underlying problem and write it as a short, informative warning sentence.
+   - Only flag issues that MULTIPLE viewers reported, OR that are factually verified by the transcript.
+   - IGNORE: comments that say a problem was already fixed, thank-you notes, off-topic questions, and isolated personal opinions.
+   - IGNORE: any comment with 0 likes unless it specifically identifies a critical issue (broken link, dangerous advice, major error).
+   - Each red flag MUST start with "⚠️ " and describe an ACTIONABLE issue (e.g. "⚠️ Some viewers report the Node.js version shown (v14) is outdated and breaks on newer setups").
+   - If there are no real red flags, return an empty array [].
+   - MAXIMUM 4 red flags. Quality over quantity.
+
+2. ACCURACY & VERIFICATION:
+   - Base your summary and takeaways strictly on what the video actually demonstrates.
+   - Explicitly note if the video fails to deliver on its title promise.
+
+3. KEY TAKEAWAYS:
+   - Provide 3 to 5 concrete, verifiable takeaways explaining what viewers will learn.
 
 VIDEO DETAILS:
 - Title: "${inputs.metadata.title}"
@@ -105,15 +118,15 @@ VIDEO DETAILS:
 TRANSCRIPT EXCERPT:
 ${transcriptPreview}
 
-AUDIENCE COMMENTS (Sampled & Filtered):
+AUDIENCE COMMENTS (Sampled & Filtered — DO NOT quote these verbatim):
 ${commentExcerpts}
 
 TASK:
 Generate an objective, highly truthful analysis in JSON format with:
-1. "summaryShort": A 40-to-60 word accurate, verified summary of what this video actually teaches or demonstrates.
-2. "keyTakeaways": An array of 3 to 5 clear, concrete bullet points summarizing key concepts or claims verified by the content.
-3. "audienceRedFlags": An array of 1 to 4 specific audience warnings or issues. Each bullet MUST start with the "⚠️ " emoji. (e.g. "⚠️ [⏱️ 5:20] Viewers report the API key shown is expired").
-4. "topAudiencePraise": An array of 1 to 3 genuine positive highlights verified by the audience.
+1. "summaryShort": A 40-to-60 word accurate summary of what this video teaches or demonstrates.
+2. "keyTakeaways": An array of 3 to 5 concrete bullet points summarizing key verified concepts.
+3. "audienceRedFlags": An array of 0 to 4 SYNTHESIZED warnings. Must start with "⚠️ ". Do NOT include quotes from comments. Return [] if there are no real issues.
+4. "topAudiencePraise": An array of 1 to 3 SYNTHESIZED genuine positive highlights from the audience.
 `;
 
   try {
@@ -166,10 +179,32 @@ Generate an objective, highly truthful analysis in JSON format with:
     }
 
     const parsed = JSON.parse(jsonText) as VideoInsights;
+
+    // Post-process red flags: strip any that are raw comment quotes or false positives
+    const POSITIVE_PHRASES = [
+      'thanks for', 'thank you', 'great video', 'awesome', 'love this',
+      'fixed', "it's fixed", 'it is fixed', 'update:', 'problem solved',
+      '!!! youtube came through', 'works now', 'solved', 'working now',
+    ];
+    const QUOTE_PATTERN = /^⚠️\s*".*"\s*(\(\d+ likes\))?$/;
+
+    const filteredRedFlags = (Array.isArray(parsed.audienceRedFlags) ? parsed.audienceRedFlags : [])
+      .filter((flag: string) => {
+        const lower = flag.toLowerCase();
+        // Remove flags that are raw comment quotes (starts with ⚠️ then a quote)
+        if (QUOTE_PATTERN.test(flag.trim())) return false;
+        // Remove flags that describe already-resolved or positive situations
+        if (POSITIVE_PHRASES.some((phrase) => lower.includes(phrase))) return false;
+        // Remove flags shorter than 20 chars (not actionable)
+        if (flag.replace(/^⚠️\s*/, '').trim().length < 20) return false;
+        return true;
+      })
+      .slice(0, 4);
+
     return {
       summaryShort: parsed.summaryShort || '',
       keyTakeaways: Array.isArray(parsed.keyTakeaways) ? parsed.keyTakeaways : [],
-      audienceRedFlags: Array.isArray(parsed.audienceRedFlags) ? parsed.audienceRedFlags : [],
+      audienceRedFlags: filteredRedFlags,
       topAudiencePraise: Array.isArray(parsed.topAudiencePraise) ? parsed.topAudiencePraise : [],
     };
   } catch {

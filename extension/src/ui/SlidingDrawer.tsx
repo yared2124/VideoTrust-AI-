@@ -313,12 +313,20 @@ export const SlidingDrawer: React.FC<SlidingDrawerProps> = ({
               <div>
                 <h4 className="text-xs font-semibold text-rose-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
-                  Community Red Flags ({insights.audienceRedFlags.length})
+                  Community Red Flags
+                  {insights.audienceRedFlags.length > 0 && (
+                    <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-rose-500/30 text-rose-300 font-mono">
+                      {insights.audienceRedFlags.length}
+                    </span>
+                  )}
                 </h4>
                 {insights.audienceRedFlags.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic p-3 rounded bg-slate-900/30 border border-white/5">
-                    No community red flags detected. The comments are overwhelmingly positive.
-                  </p>
+                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <p className="text-xs text-emerald-300">
+                      No significant community issues detected. Audience comments are largely positive and on-topic.
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {insights.audienceRedFlags.map((flag, idx) => (
