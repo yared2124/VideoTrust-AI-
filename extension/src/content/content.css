@@ -23,6 +23,16 @@
   vertical-align: middle;
 }
 
+/* Thumbnail overlay for search result cards */
+.vt-thumbnail-overlay {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 25;
+  pointer-events: auto;
+  line-height: 1;
+}
+
 /* Global Portal for Drawer (maximum possible z-index to overlay entire screen) */
 #vt-drawer-portal {
   position: fixed;

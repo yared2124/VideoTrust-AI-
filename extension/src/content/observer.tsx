@@ -3,12 +3,14 @@ import { createRoot, Root } from 'react-dom/client';
 import type { CompleteAnalysisReport } from '../types/index.js';
 import { getCachedReport, setCachedReport } from '../utils/storage.js';
 import { TrustBadge } from '../ui/TrustBadge.js';
+import { MiniBadge } from '../ui/MiniBadge.js';
+import { SlidingDrawer } from '../ui/SlidingDrawer.js';
 import './content.css';
 
 console.log('[VideoTrust AI] Content script loaded on YouTube.');
 
 /**
- * Root React application component injected into YouTube DOM.
+ * Root React application component injected into YouTube Watch DOM.
  */
 const App: React.FC<{ initialVideoId: string }> = ({ initialVideoId }) => {
   const [videoId, setVideoId] = useState<string>(initialVideoId);
@@ -100,6 +102,50 @@ const App: React.FC<{ initialVideoId: string }> = ({ initialVideoId }) => {
 };
 
 // ============================================================================
+// GLOBAL DRAWER HOST (Opens drawer from anywhere: Search, Home, or Watch)
+// ============================================================================
+
+const GlobalDrawerHost: React.FC = () => {
+  const [drawerReport, setDrawerReport] = useState<CompleteAnalysisReport | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = (e: CustomEvent<{ report: CompleteAnalysisReport }>) => {
+      if (e.detail?.report) {
+        setDrawerReport(e.detail.report);
+        setIsOpen(true);
+      }
+    };
+
+    window.addEventListener('vt-open-drawer' as any, handleOpen as EventListener);
+    return () => {
+      window.removeEventListener('vt-open-drawer' as any, handleOpen as EventListener);
+    };
+  }, []);
+
+  return (
+    <SlidingDrawer
+      isOpen={isOpen}
+      onClose={() => setIsOpen(false)}
+      report={drawerReport}
+    />
+  );
+};
+
+let globalDrawerRoot: Root | null = null;
+function initGlobalDrawerHost() {
+  if (globalDrawerRoot) return;
+  let host = document.getElementById('vt-global-drawer');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'vt-global-drawer';
+    document.body.appendChild(host);
+  }
+  globalDrawerRoot = createRoot(host);
+  globalDrawerRoot.render(<GlobalDrawerHost />);
+}
+
+// ============================================================================
 // DOM INJECTION & YOUTUBE SPA OBSERVER
 // ============================================================================
 
@@ -116,7 +162,6 @@ function getVideoIdFromUrl(): string | null {
  * Locate the optimal injection anchor in YouTube's DOM.
  */
 function findInjectionTarget(): HTMLElement | null {
-  // Selector priority list for YouTube's evolving DOM
   const selectors = [
     '#owner #subscribe-button',
     '#subscribe-button',
@@ -138,12 +183,13 @@ function findInjectionTarget(): HTMLElement | null {
 }
 
 /**
- * Mount or update the VideoTrust AI widget in the YouTube DOM.
+ * Mount or update the in-page VideoTrust AI widget on YouTube Watch pages.
  */
 function injectWidget() {
+  initGlobalDrawerHost();
   const videoId = getVideoIdFromUrl();
 
-  // If not on a watch page, clean up existing root
+  // If not on a watch page, clean up watch page root
   if (!videoId) {
     if (reactRoot) {
       reactRoot.unmount();
@@ -195,16 +241,71 @@ function injectWidget() {
   }
 }
 
+/**
+ * Scan video cards on Search results, Homepage, and Up-Next sidebar to inject MiniBadges.
+ */
+function scanVideoCards() {
+  initGlobalDrawerHost();
+
+  const cardSelectors = [
+    'ytd-video-renderer',
+    'ytd-rich-item-renderer',
+    'ytd-compact-video-renderer',
+  ];
+
+  const cards = document.querySelectorAll<HTMLElement>(cardSelectors.join(','));
+
+  for (const card of cards) {
+    if (card.getAttribute('data-vt-mini') === 'true') {
+      continue;
+    }
+
+    // Find anchor tag with video ID
+    const anchor = card.querySelector<HTMLAnchorElement>('a#thumbnail, a#video-title');
+    const href = anchor?.getAttribute('href') || '';
+    const match = href.match(/[?&]v=([a-zA-Z0-9_-]{11})/) || href.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+    const videoId = match ? match[1] : null;
+
+    if (!videoId) continue;
+
+    // Find thumbnail container
+    const thumb = card.querySelector<HTMLElement>('ytd-thumbnail, #thumbnail');
+    if (!thumb) continue;
+
+    card.setAttribute('data-vt-mini', 'true');
+
+    // Make sure thumbnail has relative positioning
+    const currentPos = window.getComputedStyle(thumb).position;
+    if (currentPos === 'static') {
+      thumb.style.position = 'relative';
+    }
+
+    // Create mini-badge container
+    const overlay = document.createElement('div');
+    overlay.className = 'vt-thumbnail-overlay';
+    thumb.appendChild(overlay);
+
+    const miniRoot = createRoot(overlay);
+    miniRoot.render(<MiniBadge videoId={videoId} />);
+  }
+}
+
 // 1. Listen for YouTube's custom navigation events (SPA routing)
 window.addEventListener('yt-navigate-finish', () => {
-  setTimeout(injectWidget, 400);
+  setTimeout(() => {
+    injectWidget();
+    scanVideoCards();
+  }, 400);
 });
 
 window.addEventListener('yt-page-data-updated', () => {
-  setTimeout(injectWidget, 400);
+  setTimeout(() => {
+    injectWidget();
+    scanVideoCards();
+  }, 400);
 });
 
-// 2. MutationObserver fallback for dynamic loading and Theater Mode toggles
+// 2. MutationObserver fallback for dynamic loading, scroll, and Theater Mode
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 const observer = new MutationObserver(() => {
   if (debounceTimer) clearTimeout(debounceTimer);
@@ -216,7 +317,9 @@ const observer = new MutationObserver(() => {
         injectWidget();
       }
     }
-  }, 500);
+    // Continuously scan newly loaded video cards on search/feed
+    scanVideoCards();
+  }, 400);
 });
 
 // Start observing document body
@@ -228,8 +331,11 @@ if (document.body) {
   });
 }
 
-// Initial injection attempt
-setTimeout(injectWidget, 600);
+// Initial execution
+setTimeout(() => {
+  injectWidget();
+  scanVideoCards();
+}, 600);
 
 // Global listener for seeking video to exact timestamp when clicked in drawer
 window.addEventListener('vt-seek-video' as any, ((event: CustomEvent<{ seconds: number }>) => {
