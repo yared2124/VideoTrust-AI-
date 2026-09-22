@@ -297,9 +297,9 @@ export const SlidingDrawer: React.FC<SlidingDrawerProps> = ({
                   </span>
                 </div>
                 <div className="rounded-lg bg-slate-900/40 border border-white/5 p-2.5">
-                  <span className="text-slate-400 block">Comments Sampled</span>
+                  <span className="text-slate-400 block">Comments Evaluated</span>
                   <span className="font-mono text-white font-medium text-xs mt-0.5">
-                    {telemetry.commentsSampled} comments
+                    {telemetry.commentsSampled} comments (max 2,000)
                   </span>
                 </div>
               </div>

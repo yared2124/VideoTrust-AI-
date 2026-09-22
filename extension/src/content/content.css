@@ -4,9 +4,14 @@
 
 /* Scoped styles & root container */
 #vt-root {
-  display: inline-flex;
-  vertical-align: middle;
-  align-items: center;
+  display: inline-flex !important;
+  vertical-align: middle !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+  min-width: max-content !important;
+  white-space: nowrap !important;
+  position: relative !important;
+  z-index: 999 !important;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -14,13 +19,14 @@
 
 /* Elevated badge wrapper to avoid clipping by adjacent description */
 .vt-badge-wrapper {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 8px;
-  margin-right: 8px;
-  position: relative;
-  z-index: 1000;
-  vertical-align: middle;
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+  margin-left: 10px !important;
+  margin-right: 8px !important;
+  position: relative !important;
+  z-index: 1000 !important;
+  vertical-align: middle !important;
 }
 
 /* Thumbnail overlay for search result cards */

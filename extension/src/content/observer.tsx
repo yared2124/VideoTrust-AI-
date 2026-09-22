@@ -146,6 +146,7 @@ function initGlobalDrawerHost() {
 
 const VT_ROOT_ID = 'vt-root';
 let reactRoot: Root | null = null;
+let currentMountedContainer: HTMLElement | null = null;
 let currentVideoId: string | null = null;
 
 function getVideoIdFromUrl(): string | null {
@@ -155,14 +156,20 @@ function getVideoIdFromUrl(): string | null {
 
 /**
  * Locate the optimal injection anchor in YouTube's DOM.
+ * Prioritizes the subscribe button area under the video title.
  */
 function findInjectionTarget(): HTMLElement | null {
   const selectors = [
+    'ytd-watch-metadata #owner #subscribe-button',
+    'ytd-watch-metadata #subscribe-button',
     '#owner #subscribe-button',
     '#subscribe-button',
-    '#top-row #owner',
-    '#owner.ytd-watch-metadata',
+    'ytd-subscribe-button-renderer',
     'ytd-watch-metadata #owner',
+    '#owner.ytd-watch-metadata',
+    '#top-row #owner',
+    '#top-row #actions',
+    '#actions.ytd-watch-metadata',
     '#actions-inner',
     '#above-the-fold #title',
   ];
@@ -187,25 +194,14 @@ function injectWidget() {
   // If not on a watch page, clean up watch page root
   if (!videoId) {
     if (reactRoot) {
-      reactRoot.unmount();
+      try {
+        reactRoot.unmount();
+      } catch {}
       reactRoot = null;
       document.getElementById(VT_ROOT_ID)?.remove();
     }
+    currentMountedContainer = null;
     currentVideoId = null;
-    return;
-  }
-
-  // If video changed, notify existing mounted React component
-  if (currentVideoId && currentVideoId !== videoId) {
-    currentVideoId = videoId;
-    window.dispatchEvent(
-      new CustomEvent('vt-video-changed', { detail: { videoId } })
-    );
-  }
-
-  // Check if our container already exists and is attached
-  let container = document.getElementById(VT_ROOT_ID);
-  if (container && container.isConnected) {
     return;
   }
 
@@ -215,7 +211,21 @@ function injectWidget() {
     return;
   }
 
-  // Create clean host container
+  // Check if our container already exists and is attached
+  let container = document.getElementById(VT_ROOT_ID);
+
+  // If container is attached and its root is already active for this container
+  if (container && container.isConnected && currentMountedContainer === container && reactRoot) {
+    if (currentVideoId !== videoId) {
+      currentVideoId = videoId;
+      window.dispatchEvent(
+        new CustomEvent('vt-video-changed', { detail: { videoId } })
+      );
+    }
+    return;
+  }
+
+  // Create clean host container if needed
   if (!container) {
     container = document.createElement('div');
     container.id = VT_ROOT_ID;
@@ -228,12 +238,19 @@ function injectWidget() {
     target.parentNode?.appendChild(container);
   }
 
-  // Mount React Root
-  if (!reactRoot) {
-    currentVideoId = videoId;
-    reactRoot = createRoot(container);
-    reactRoot.render(<App initialVideoId={videoId} />);
+  // Clean up previous root if container was detached / re-created by YouTube SPA
+  if (reactRoot) {
+    try {
+      reactRoot.unmount();
+    } catch {}
+    reactRoot = null;
   }
+
+  // Mount React Root
+  currentVideoId = videoId;
+  currentMountedContainer = container;
+  reactRoot = createRoot(container);
+  reactRoot.render(<App initialVideoId={videoId} />);
 }
 
 /**
@@ -286,19 +303,25 @@ function scanVideoCards() {
 }
 
 // 1. Listen for YouTube's custom navigation events (SPA routing)
-window.addEventListener('yt-navigate-finish', () => {
+function scheduleInjection() {
+  injectWidget();
+  scanVideoCards();
   setTimeout(() => {
     injectWidget();
     scanVideoCards();
-  }, 400);
-});
+  }, 300);
+  setTimeout(() => {
+    injectWidget();
+    scanVideoCards();
+  }, 800);
+  setTimeout(() => {
+    injectWidget();
+    scanVideoCards();
+  }, 1600);
+}
 
-window.addEventListener('yt-page-data-updated', () => {
-  setTimeout(() => {
-    injectWidget();
-    scanVideoCards();
-  }, 400);
-});
+window.addEventListener('yt-navigate-finish', scheduleInjection);
+window.addEventListener('yt-page-data-updated', scheduleInjection);
 
 // 2. MutationObserver fallback for dynamic loading, scroll, and Theater Mode
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -314,7 +337,7 @@ const observer = new MutationObserver(() => {
     }
     // Continuously scan newly loaded video cards on search/feed
     scanVideoCards();
-  }, 400);
+  }, 300);
 });
 
 // Start observing document body
@@ -327,10 +350,7 @@ if (document.body) {
 }
 
 // Initial execution
-setTimeout(() => {
-  injectWidget();
-  scanVideoCards();
-}, 600);
+scheduleInjection();
 
 // Global listener for seeking video to exact timestamp when clicked in drawer
 window.addEventListener('vt-seek-video' as any, ((event: CustomEvent<{ seconds: number }>) => {
