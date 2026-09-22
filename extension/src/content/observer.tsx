@@ -156,28 +156,64 @@ function getVideoIdFromUrl(): string | null {
 
 /**
  * Locate the optimal injection anchor in YouTube's DOM.
- * Prioritizes the subscribe button area under the video title.
+ * Prioritizes the area directly adjacent to the subscribe button.
+ *
+ * On modern YouTube, `#owner` (under `#top-row`) houses the channel avatar, name,
+ * and the Subscribe button at its far right edge. Placing our root immediately
+ * AFTER `#owner` positions it directly next to the Subscribe button inside the
+ * flexible #top-row header, immune to Polymer component re-renders or overflow clipping.
  */
-function findInjectionTarget(): HTMLElement | null {
-  const selectors = [
-    'ytd-watch-metadata #owner #subscribe-button',
-    'ytd-watch-metadata #subscribe-button',
-    '#owner #subscribe-button',
+function findInjectionTarget(): { target: HTMLElement; position: 'after' | 'before' } | null {
+  // 1. Primary Target: Directly after #owner (sits directly next to Subscribe button)
+  const ownerSelectors = [
+    'ytd-watch-metadata #top-row #owner',
+    'ytd-watch-metadata #owner',
+    '#top-row #owner',
+    '#owner.ytd-watch-metadata',
+  ];
+  for (const selector of ownerSelectors) {
+    const el = document.querySelector<HTMLElement>(selector);
+    if (el && el.isConnected) {
+      return { target: el, position: 'after' };
+    }
+  }
+
+  // 2. Direct Subscribe Button target
+  const subSelectors = [
     '#subscribe-button',
     'ytd-subscribe-button-renderer',
-    'ytd-watch-metadata #owner',
-    '#owner.ytd-watch-metadata',
-    '#top-row #owner',
+    '#owner #subscribe-button',
+  ];
+  for (const selector of subSelectors) {
+    const el = document.querySelector<HTMLElement>(selector);
+    if (el && el.isConnected) {
+      return { target: el, position: 'after' };
+    }
+  }
+
+  // 3. Fallback: Right before #actions (Like/Share row)
+  const actionSelectors = [
+    'ytd-watch-metadata #top-row #actions',
     '#top-row #actions',
     '#actions.ytd-watch-metadata',
     '#actions-inner',
-    '#above-the-fold #title',
   ];
-
-  for (const selector of selectors) {
+  for (const selector of actionSelectors) {
     const el = document.querySelector<HTMLElement>(selector);
     if (el && el.isConnected) {
-      return el;
+      return { target: el, position: 'before' };
+    }
+  }
+
+  // 4. Fallback: Below/next to video title
+  const titleSelectors = [
+    '#above-the-fold #title',
+    '#title.ytd-watch-metadata',
+  ];
+  for (const selector of titleSelectors) {
+    const el = document.querySelector<HTMLElement>(selector);
+    if (el && el.isConnected) {
+      return { target: el, position: 'after' };
     }
   }
 
@@ -205,17 +241,37 @@ function injectWidget() {
     return;
   }
 
-  // Find target anchor in YouTube DOM
-  const target = findInjectionTarget();
-  if (!target) {
+  // Find optimal target anchor in YouTube DOM
+  const injection = findInjectionTarget();
+  if (!injection) {
     return;
   }
 
-  // Check if our container already exists and is attached
-  let container = document.getElementById(VT_ROOT_ID);
+  const { target, position } = injection;
 
-  // If container is attached and its root is already active for this container
-  if (container && container.isConnected && currentMountedContainer === container && reactRoot) {
+  // Create clean host container if needed
+  let container = document.getElementById(VT_ROOT_ID);
+  if (!container) {
+    container = document.createElement('div');
+    container.id = VT_ROOT_ID;
+  }
+
+  // Ensure container is in the right location next to the target
+  const isCorrectlyPlaced =
+    position === 'after'
+      ? target.nextSibling === container
+      : container.nextSibling === target;
+
+  if (!isCorrectlyPlaced) {
+    if (position === 'after') {
+      target.parentNode?.insertBefore(container, target.nextSibling);
+    } else {
+      target.parentNode?.insertBefore(container, target);
+    }
+  }
+
+  // If container is already mounted with active React root
+  if (container.isConnected && currentMountedContainer === container && reactRoot) {
     if (currentVideoId !== videoId) {
       currentVideoId = videoId;
       window.dispatchEvent(
@@ -223,19 +279,6 @@ function injectWidget() {
       );
     }
     return;
-  }
-
-  // Create clean host container if needed
-  if (!container) {
-    container = document.createElement('div');
-    container.id = VT_ROOT_ID;
-  }
-
-  // Insert next to the target element (after subscribe button or next to owner)
-  if (target.nextSibling) {
-    target.parentNode?.insertBefore(container, target.nextSibling);
-  } else {
-    target.parentNode?.appendChild(container);
   }
 
   // Clean up previous root if container was detached / re-created by YouTube SPA
