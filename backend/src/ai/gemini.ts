@@ -98,7 +98,7 @@ Generate an objective, highly truthful analysis in JSON format with:
 `;
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -138,7 +138,9 @@ Generate an objective, highly truthful analysis in JSON format with:
     }
 
     const data = (await response.json()) as any;
-    const jsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const textPart = parts.find((p: any) => typeof p?.text === 'string' && p.text.trim().length > 0);
+    const jsonText = textPart?.text;
 
     if (!jsonText) {
       return generateHeuristicInsights(inputs.metadata, inputs.curatedComments);

@@ -31,16 +31,16 @@ export function calculateCosineSimilarity(vecA: number[], vecB: number[]): numbe
 }
 
 /**
- * Fetches text embeddings from Google Gemini API (text-embedding-004).
+ * Fetches text embeddings from Google Gemini API (gemini-embedding-2).
  */
 async function fetchGeminiEmbedding(text: string, apiKey: string): Promise<number[] | null> {
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'models/text-embedding-004',
+        model: 'models/gemini-embedding-2',
         content: {
           parts: [{ text: text.slice(0, 2048) }], // Limit input size
         },
