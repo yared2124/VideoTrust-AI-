@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import type { CompleteAnalysisReport } from '../types/index.js';
 import { getCachedReport, setCachedReport } from '../utils/storage.js';
+import { sendMessage } from '../utils/messaging.js';
 import { TrustBadge } from '../ui/TrustBadge.js';
 import { MiniBadge } from '../ui/MiniBadge.js';
 import { SlidingDrawer } from '../ui/SlidingDrawer.js';
@@ -34,36 +35,30 @@ const App: React.FC<{ initialVideoId: string }> = ({ initialVideoId }) => {
 
     // 2. Request analysis via background service worker
     try {
-      if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
-        throw new Error('Chrome runtime unavailable');
+      const response = await sendMessage({
+        type: 'ANALYZE_VIDEO',
+        payload: { videoId: id, forceRefresh },
+      });
+
+      // null means the extension context was invalidated — fail silently
+      if (response === null) {
+        setError('Extension context invalidated — please refresh the tab.');
+        setIsLoading(false);
+        return;
       }
 
-      chrome.runtime.sendMessage(
-        {
-          type: 'ANALYZE_VIDEO',
-          payload: { videoId: id, forceRefresh },
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            setError(chrome.runtime.lastError.message || 'Worker connection failed');
-            setIsLoading(false);
-            return;
-          }
+      if (!response.success) {
+        setError(response.error || 'Analysis failed');
+        setIsLoading(false);
+        return;
+      }
 
-          if (!response || !response.success) {
-            setError(response?.error || 'Analysis failed');
-            setIsLoading(false);
-            return;
-          }
+      const reportData: CompleteAnalysisReport = response.data;
+      setReport(reportData);
+      setIsLoading(false);
 
-          const reportData: CompleteAnalysisReport = response.data;
-          setReport(reportData);
-          setIsLoading(false);
-
-          // Persist to local cache for 24h
-          setCachedReport(id, reportData).catch(() => {});
-        }
-      );
+      // Persist to local cache for 24h
+      setCachedReport(id, reportData).catch(() => {});
     } catch (err: any) {
       setError(err.message || 'Failed to request analysis');
       setIsLoading(false);

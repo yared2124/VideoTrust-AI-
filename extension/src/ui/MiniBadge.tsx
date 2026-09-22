@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, RefreshCw } from 'lucide-react';
 import type { CompleteAnalysisReport, Recommendation } from '../types/index.js';
 import { getCachedReport, setCachedReport } from '../utils/storage.js';
+import { sendMessage, isExtensionContextValid } from '../utils/messaging.js';
 
 interface MiniBadgeProps {
   videoId: string;
@@ -26,20 +27,14 @@ export const MiniBadge: React.FC<MiniBadgeProps> = ({ videoId }) => {
       }
 
       // 2. Query backend Redis / DB cache
-      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-        chrome.runtime.sendMessage(
-          { type: 'GET_CACHED_REPORT', payload: { videoId } },
-          (response) => {
-            if (isMounted && response?.success && response.data) {
-              setReport(response.data);
-              setCachedReport(videoId, response.data).catch(() => {});
-            }
-            if (isMounted) setCheckedCache(true);
-          }
-        );
-      } else {
-        if (isMounted) setCheckedCache(true);
+      if (isExtensionContextValid()) {
+        const response = await sendMessage({ type: 'GET_CACHED_REPORT', payload: { videoId } });
+        if (isMounted && response?.success && response.data) {
+          setReport(response.data);
+          setCachedReport(videoId, response.data).catch(() => {});
+        }
       }
+      if (isMounted) setCheckedCache(true);
     }
 
     checkCache();
@@ -55,22 +50,22 @@ export const MiniBadge: React.FC<MiniBadgeProps> = ({ videoId }) => {
     if (isLoading) return;
     setIsLoading(true);
 
-    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-      chrome.runtime.sendMessage(
-        { type: 'ANALYZE_VIDEO', payload: { videoId } },
-        (response) => {
-          setIsLoading(false);
-          if (response?.success && response.data) {
-            setReport(response.data);
-            setCachedReport(videoId, response.data).catch(() => {});
-            // Open drawer with newly analyzed report
-            window.dispatchEvent(
-              new CustomEvent('vt-open-drawer', { detail: { report: response.data } })
-            );
-          }
-        }
-      );
+    if (!isExtensionContextValid()) {
+      setIsLoading(false);
+      return;
     }
+
+    sendMessage({ type: 'ANALYZE_VIDEO', payload: { videoId } }).then((response) => {
+      setIsLoading(false);
+      if (response?.success && response.data) {
+        setReport(response.data);
+        setCachedReport(videoId, response.data).catch(() => {});
+        // Open drawer with newly analyzed report
+        window.dispatchEvent(
+          new CustomEvent('vt-open-drawer', { detail: { report: response.data } })
+        );
+      }
+    });
   };
 
   const handleBadgeClick = (e: React.MouseEvent) => {
