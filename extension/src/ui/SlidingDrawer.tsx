@@ -68,6 +68,11 @@ export const SlidingDrawer: React.FC<SlidingDrawerProps> = ({
 
   if (!isOpen || !report) return null;
 
+  const portalTarget = typeof document !== 'undefined'
+    ? (document.getElementById('vt-global-drawer') || document.body)
+    : null;
+  if (!portalTarget) return null;
+
   const { verdict, scoreBreakdown, insights, metadata, telemetry } = report;
 
   const getVerdictStyle = () => {
@@ -452,6 +457,6 @@ export const SlidingDrawer: React.FC<SlidingDrawerProps> = ({
         </footer>
       </aside>
     </div>,
-    document.body
+    portalTarget
   );
 };

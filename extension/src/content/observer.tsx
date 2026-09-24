@@ -130,14 +130,19 @@ const GlobalDrawerHost: React.FC = () => {
 let globalDrawerRoot: Root | null = null;
 function initGlobalDrawerHost() {
   if (globalDrawerRoot) return;
+  if (typeof document === 'undefined' || !document.body) return;
   let host = document.getElementById('vt-global-drawer');
   if (!host) {
     host = document.createElement('div');
     host.id = 'vt-global-drawer';
     document.body.appendChild(host);
   }
-  globalDrawerRoot = createRoot(host);
-  globalDrawerRoot.render(<GlobalDrawerHost />);
+  try {
+    globalDrawerRoot = createRoot(host);
+    globalDrawerRoot.render(<GlobalDrawerHost />);
+  } catch (err) {
+    console.warn('[VideoTrust AI] Error initializing global drawer host:', err);
+  }
 }
 
 // ============================================================================
@@ -290,10 +295,14 @@ function injectWidget() {
   }
 
   // Mount React Root
-  currentVideoId = videoId;
-  currentMountedContainer = container;
-  reactRoot = createRoot(container);
-  reactRoot.render(<App initialVideoId={videoId} />);
+  try {
+    currentVideoId = videoId;
+    currentMountedContainer = container;
+    reactRoot = createRoot(container);
+    reactRoot.render(<App initialVideoId={videoId} />);
+  } catch (err) {
+    console.warn('[VideoTrust AI] Failed to mount watch widget:', err);
+  }
 }
 
 /**
@@ -325,23 +334,27 @@ function scanVideoCards() {
 
     // Find thumbnail container
     const thumb = card.querySelector<HTMLElement>('ytd-thumbnail, #thumbnail');
-    if (!thumb) continue;
+    if (!thumb || !thumb.isConnected) continue;
 
-    card.setAttribute('data-vt-mini', 'true');
+    try {
+      card.setAttribute('data-vt-mini', 'true');
 
-    // Make sure thumbnail has relative positioning
-    const currentPos = window.getComputedStyle(thumb).position;
-    if (currentPos === 'static') {
-      thumb.style.position = 'relative';
+      // Make sure thumbnail has relative positioning
+      const currentPos = window.getComputedStyle(thumb).position;
+      if (currentPos === 'static') {
+        thumb.style.position = 'relative';
+      }
+
+      // Create mini-badge container
+      const overlay = document.createElement('div');
+      overlay.className = 'vt-thumbnail-overlay';
+      thumb.appendChild(overlay);
+
+      const miniRoot = createRoot(overlay);
+      miniRoot.render(<MiniBadge videoId={videoId} />);
+    } catch (err) {
+      console.warn('[VideoTrust AI] Failed to mount mini badge on card:', err);
     }
-
-    // Create mini-badge container
-    const overlay = document.createElement('div');
-    overlay.className = 'vt-thumbnail-overlay';
-    thumb.appendChild(overlay);
-
-    const miniRoot = createRoot(overlay);
-    miniRoot.render(<MiniBadge videoId={videoId} />);
   }
 }
 
@@ -383,17 +396,19 @@ const observer = new MutationObserver(() => {
   }, 300);
 });
 
-// Start observing document body
-if (document.body) {
-  observer.observe(document.body, { childList: true, subtree: true });
-} else {
-  document.addEventListener('DOMContentLoaded', () => {
+// Start observing document body & initial execution safely
+function startObserver() {
+  if (document.body) {
     observer.observe(document.body, { childList: true, subtree: true });
-  });
+  }
+  scheduleInjection();
 }
 
-// Initial execution
-scheduleInjection();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startObserver);
+} else {
+  startObserver();
+}
 
 // Global listener for seeking video to exact timestamp when clicked in drawer
 window.addEventListener('vt-seek-video' as any, ((event: CustomEvent<{ seconds: number }>) => {
