@@ -26,6 +26,7 @@ async function buildExtension() {
       outDir: 'dist',
       emptyOutDir: false,
       target: 'es2022',
+      sourcemap: 'inline',
       rollupOptions: {
         input: resolve(__dirname, 'src/content/observer.tsx'),
         output: {
@@ -53,6 +54,7 @@ async function buildExtension() {
       outDir: 'dist',
       emptyOutDir: false,
       target: 'es2022',
+      sourcemap: 'inline',
       rollupOptions: {
         input: resolve(__dirname, 'src/background/worker.ts'),
         output: {
