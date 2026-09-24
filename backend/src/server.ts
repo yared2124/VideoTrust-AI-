@@ -18,8 +18,9 @@ await server.register(cors, {
 });
 
 await server.register(rateLimit, {
-  max: 60,
+  max: 3000,
   timeWindow: '1 minute',
+  allowList: ['127.0.0.1', '::1', 'localhost'],
 });
 
 // Health check endpoint
