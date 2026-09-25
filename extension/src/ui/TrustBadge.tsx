@@ -23,11 +23,14 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
   if (isLoading) {
     return (
       <div className="vt-badge-wrapper select-none">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/90 border border-indigo-500/40 text-indigo-200 text-xs shadow-md vt-shimmer">
-          <Shield className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-          <span className="font-semibold text-white tracking-tight">VideoTrust AI</span>
-          <div className="flex items-center gap-1 border-l border-white/20 pl-2 text-[11px] text-indigo-300">
-            <RefreshCw className="h-3 w-3 animate-spin text-indigo-400" />
+        <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-950/95 border border-indigo-500/50 text-indigo-200 text-sm shadow-lg vt-shimmer">
+          <Shield className="h-4 w-4 text-indigo-400 shrink-0" />
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-white tracking-tight text-[13.5px]">VideoTrust AI</span>
+            <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-md bg-indigo-500/25 border border-indigo-400/40 text-indigo-200 leading-none">v1.0</span>
+          </div>
+          <div className="flex items-center gap-1.5 border-l border-white/20 pl-2.5 text-xs text-indigo-300">
+            <RefreshCw className="h-3.5 w-3.5 animate-spin text-indigo-400" />
             <span>Analyzing...</span>
           </div>
         </div>
@@ -41,13 +44,16 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
       <div className="vt-badge-wrapper select-none">
         <button
           onClick={onRetry}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/90 border border-rose-500/40 text-rose-300 text-xs shadow-md hover:bg-slate-900 transition-colors cursor-pointer"
+          className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-950/95 border border-rose-500/50 text-rose-300 text-sm shadow-lg hover:bg-slate-900 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
           title={error || 'Could not analyze video. Click to retry.'}
         >
-          <Shield className="h-3.5 w-3.5 text-rose-400 shrink-0" />
-          <span className="font-semibold text-white tracking-tight">VideoTrust AI</span>
-          <div className="flex items-center gap-1 border-l border-white/20 pl-2 text-[11px] text-rose-300">
-            <AlertCircle className="h-3 w-3 text-rose-400" />
+          <Shield className="h-4 w-4 text-rose-400 shrink-0" />
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-white tracking-tight text-[13.5px]">VideoTrust AI</span>
+            <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-md bg-rose-500/25 border border-rose-400/40 text-rose-200 leading-none">v1.0</span>
+          </div>
+          <div className="flex items-center gap-1.5 border-l border-white/20 pl-2.5 text-xs text-rose-300">
+            <AlertCircle className="h-3.5 w-3.5 text-rose-400" />
             <span>Retry</span>
           </div>
         </button>
@@ -101,26 +107,27 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
           onClick={() => setIsDrawerOpen(true)}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0A0D14]/95 backdrop-blur-md border text-xs text-white transition-all duration-200 cursor-pointer transform hover:scale-[1.03] active:scale-[0.98] shadow-lg ${status.border} ${status.glow}`}
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#0A0D14]/95 backdrop-blur-md border text-sm text-white transition-all duration-200 cursor-pointer transform hover:scale-[1.03] active:scale-[0.98] shadow-xl ${status.border} ${status.glow}`}
           aria-label={`VideoTrust AI score ${verdict.trustScore}%, recommendation: ${verdict.recommendation}. Click to open full intelligence report.`}
         >
           {/* Status Indicator Pulse Dot */}
-          <span className={`h-2 w-2 rounded-full ${status.dot} animate-pulse shrink-0`} />
+          <span className={`h-2.5 w-2.5 rounded-full ${status.dot} animate-pulse shrink-0`} />
 
-          {/* Prominent Brand Name */}
-          <div className="flex items-center gap-1 font-semibold text-slate-100 tracking-tight">
-            <Shield className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+          {/* Prominent Brand Name + v1.0 Pill */}
+          <div className="flex items-center gap-1.5 font-bold text-slate-100 tracking-tight text-[13.5px]">
+            <Shield className="h-4 w-4 text-indigo-400 shrink-0" />
             <span>VideoTrust AI</span>
+            <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-md bg-indigo-500/25 border border-indigo-400/40 text-indigo-200 leading-none">v1.0</span>
           </div>
 
           {/* Numeric Trust Score */}
-          <div className="flex items-center border-l border-white/20 pl-2 font-mono font-bold text-xs text-white">
+          <div className="flex items-center border-l border-white/25 pl-2.5 font-mono font-extrabold text-sm text-white">
             <span>{verdict.trustScore}%</span>
           </div>
 
           {/* Recommendation Chip (WATCH / MAYBE / SKIP) */}
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${status.chipBg}`}
+            className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${status.chipBg}`}
           >
             {verdict.recommendation}
           </span>
